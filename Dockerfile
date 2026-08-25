@@ -1,33 +1,35 @@
-# Stage 1: Build the monolith application
+# Stage 1: Build the application
 FROM eclipse-temurin:17-jdk-jammy AS builder
 WORKDIR /app
 
-# Copy the Maven wrapper and pom.xml to cache dependencies
+# Copy Maven files
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
-# Ensure the Maven wrapper is executable and download dependencies
 RUN chmod +x ./mvnw
 RUN ./mvnw dependency:go-offline -B
 
-# Copy the source code and build the JAR
+# Copy source and build JAR
 COPY src ./src
 RUN ./mvnw clean package -DskipTests
 
-# Stage 2: Create the runtime image
+# Stage 2: Runtime image
 FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
-# Enforce non-root user execution for security
-RUN addgroup --system echolife && adduser --system --group echolife
+# Create user/group, setup upload directory, and grant explicit ownership and read/write permissions
+RUN addgroup --system echolife && adduser --system --group echolife && \
+    mkdir -p /app/uploads && \
+    chown -R echolife:echolife /app && \
+    chmod -R 775 /app
+
+# Copy the artifact ensuring echolife owns the file
+COPY --chown=echolife:echolife --from=builder /app/target/*.jar app.jar
+
+# Switch to the non-root user
 USER echolife:echolife
 
-# Copy the built JAR from the builder stage
-COPY --from=builder /app/target/*.jar app.jar
-
-# Expose the standard Spring Boot port
 EXPOSE 8080
 
-# Start the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
