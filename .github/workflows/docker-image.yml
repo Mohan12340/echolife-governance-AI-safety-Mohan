@@ -1,64 +1,25 @@
-name: Build and Push to AWS ECR
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  build-and-push:
-    name: Build & Push Image
-    runs-on: ubuntu-latest
-    environment: Devops
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Log in to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build and Push Docker Image
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
-          IMAGE_TAG: ${{ github.run_number }}
-        run: |
-          # Build once, apply BOTH tags at the same time
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-          
-          # Push both tags to AWS
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
-          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-      # -----------------------------------------------------------
-      # 4. NOTIFICATIONS: Slack Alert on Success
-      # -----------------------------------------------------------
-      - name: Notify Slack on Success
-        if: success()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-          SLACK_COLOR: '#00ff00'
-          SLACK_TITLE: '✅ CI Pipeline Succeeded: echolife-backend'
-          SLACK_MESSAGE: 'Pipeline completed successfully. Image build #${{ github.run_number }} is now available in AWS ECR.'
-
-      # -----------------------------------------------------------
-      # 5. NOTIFICATIONS: Slack Alert on Failure
+# -----------------------------------------------------------
+      # 4. NOTIFICATIONS: Slack Alert on Failure
       # -----------------------------------------------------------
       - name: Notify Slack on Failure
         if: failure()
         uses: rtCamp/action-slack-notify@v2
         env:
+          # Notice we changed this to secrets.SLACK_WEBHOOK
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_COLOR: '#ff0000'
           SLACK_TITLE: '🚨 CI Pipeline Failed: echolife-backend'
           SLACK_MESSAGE: 'A pipeline step failed. Please check the GitHub Actions logs.'
+
+      # -----------------------------------------------------------
+      # 5. NOTIFICATIONS: Slack Alert on Success
+      # -----------------------------------------------------------
+      - name: Notify Slack on Success
+        if: success()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          # Notice we changed this to secrets.SLACK_WEBHOOK
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          SLACK_COLOR: '#00ff00'
+          SLACK_TITLE: '✅ CI Pipeline Succeeded: echolife-backend'
+          SLACK_MESSAGE: 'Pipeline completed successfully. Image build #${{ github.run_number }} is now available in AWS ECR.'
