@@ -46,7 +46,7 @@ jobs:
         if: success()
         uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_SECRET }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_COLOR: '#00ff00'
           SLACK_TITLE: '✅ CI Pipeline Succeeded: echolife-backend'
           SLACK_MESSAGE: 'Pipeline completed successfully. Image build #${{ github.run_number }} is now available in AWS ECR.'
@@ -58,7 +58,7 @@ jobs:
         if: failure()
         uses: rtCamp/action-slack-notify@v2
         env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_SECRET }}
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_COLOR: '#ff0000'
           SLACK_TITLE: '🚨 CI Pipeline Failed: echolife-backend'
           SLACK_MESSAGE: 'A pipeline step failed. Please check the GitHub Actions logs.'
