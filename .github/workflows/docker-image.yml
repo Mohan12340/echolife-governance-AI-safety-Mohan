@@ -38,3 +38,15 @@ jobs:
           # Push both tags to AWS
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          # -----------------------------------------------------------
+      # 4. NOTIFICATIONS: Slack Alert on Failure
+      # -----------------------------------------------------------
+      - name: Notify Slack on Failure
+        if: failure()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_COLOR: '#ff0000'
+          SLACK_TITLE: '🚨 CI Pipeline Failed: echolife-backend'
+          SLACK_MESSAGE: 'A pipeline step failed (Gitleaks, SonarQube, or Docker build). Please check the GitHub Actions logs.'
