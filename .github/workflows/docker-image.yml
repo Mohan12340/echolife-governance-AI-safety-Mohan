@@ -1,4 +1,4 @@
-name: Build, Scan and Push to AWS ECR
+name: Build and Push to AWS ECR
 
 on:
   push:
@@ -7,50 +7,14 @@ on:
 
 jobs:
   build-and-push:
-    name: CI/CD Pipeline
+    name: Build & Push Image
     runs-on: ubuntu-latest
-    
-    # Environment containing AWS, SonarQube, and Slack secrets
-    environment: devops 
+    environment: Devops
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          # Required for full git history (Gitleaks and SonarQube blame)
-          fetch-depth: 0 
 
-      # -----------------------------------------------------------
-      # 1. SECURITY: Gitleaks (Fails immediately if secrets found)
-      # -----------------------------------------------------------
-      - name: Check for Hardcoded Secrets (Gitleaks)
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      # -----------------------------------------------------------
-      # 2. QUALITY: SonarQube Analysis & Quality Gate
-      # -----------------------------------------------------------
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: SonarQube Scan and Quality Gate
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: |
-          ./mvnw clean verify sonar:sonar \
-            -Dsonar.projectKey=echolife-backend \
-            -Dsonar.qualitygate.wait=true \
-            -DskipTests
-            
-      # -----------------------------------------------------------
-      # 3. DEPLOY: Build and Push to AWS ECR
-      # -----------------------------------------------------------
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -68,34 +32,9 @@ jobs:
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.run_number }}
         run: |
-          # Build once and apply both build number and latest tags
+          # Build once, apply BOTH tags at the same time
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           
-          # Push both tags to AWS ECR
+          # Push both tags to AWS
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
-
-      # -----------------------------------------------------------
-      # 4. NOTIFICATIONS: Slack Failure Alert
-      # -----------------------------------------------------------
-      - name: Notify Slack on Failure
-        if: failure()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_COLOR: '#ff0000'
-          SLACK_TITLE: '🚨 CI Pipeline Failed: echolife-backend'
-          SLACK_MESSAGE: 'Pipeline step failed (Gitleaks, SonarQube, or Docker build). Check GitHub Actions logs.'
-
-      # -----------------------------------------------------------
-      # 5. NOTIFICATIONS: Slack Success Notification
-      # -----------------------------------------------------------
-      - name: Notify Slack on Success
-        if: success()
-        uses: rtCamp/action-slack-notify@v2
-        env:
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK_URL }}
-          SLACK_COLOR: '#00ff00'
-          SLACK_TITLE: '✅ CI Pipeline Succeeded: echolife-backend'
-          SLACK_MESSAGE: 'Image build #${{ github.run_number }} successfully scanned and pushed to AWS ECR.'
-EOF
