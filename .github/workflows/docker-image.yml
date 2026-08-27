@@ -39,7 +39,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
-          # -----------------------------------------------------------
+      # -----------------------------------------------------------
       # 4. NOTIFICATIONS: Slack Alert on Failure
       # -----------------------------------------------------------
       - name: Notify Slack on Failure
@@ -49,8 +49,9 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_SECRET }}
           SLACK_COLOR: '#ff0000'
           SLACK_TITLE: '🚨 CI Pipeline Failed: echolife-backend'
-          SLACK_MESSAGE: 'A pipeline step failed (Gitleaks, SonarQube, or Docker build). Please check the GitHub Actions logs.'
-  # -----------------------------------------------------------
+          SLACK_MESSAGE: 'A pipeline step failed. Please check the GitHub Actions logs.'
+
+      # -----------------------------------------------------------
       # 5. NOTIFICATIONS: Slack Alert on Success
       # -----------------------------------------------------------
       - name: Notify Slack on Success
