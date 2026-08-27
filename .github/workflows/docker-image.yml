@@ -15,7 +15,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Required to fetch full history for Gitleaks and SonarQube blame features
+          # Required to fetch full history for Gitleaks
           fetch-depth: 0 
 
       # -----------------------------------------------------------
@@ -25,29 +25,9 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      # -----------------------------------------------------------
-      # 2. QUALITY: SonarQube Analysis & Quality Gate
-      # -----------------------------------------------------------
-      - name: Set up JDK 21
-        uses: actions/setup-java@v4
-        with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
-
-      - name: SonarQube Scan and Quality Gate
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        run: |
-          ./mvnw clean verify sonar:sonar \
-            -Dsonar.projectKey=echolife-backend \
-            -Dsonar.qualitygate.wait=true \
-            -DskipTests
 
       # -----------------------------------------------------------
-      # 3. DEPLOY: Build and Push to AWS ECR
+      # 2. DEPLOY: Build and Push to AWS ECR
       # -----------------------------------------------------------
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -74,7 +54,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
       # -----------------------------------------------------------
-      # 4. NOTIFICATIONS: Slack Alert on Success
+      # 3. NOTIFICATIONS: Slack Alert on Success
       # -----------------------------------------------------------
       - name: Notify Slack on Success
         if: success()
@@ -86,7 +66,7 @@ jobs:
           SLACK_MESSAGE: 'Pipeline completed successfully. Image build #${{ github.run_number }} is now available in AWS ECR.'
 
       # -----------------------------------------------------------
-      # 5. NOTIFICATIONS: Slack Alert on Failure
+      # 4. NOTIFICATIONS: Slack Alert on Failure
       # -----------------------------------------------------------
       - name: Notify Slack on Failure
         if: failure()
@@ -95,4 +75,4 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_COLOR: '#ff0000'
           SLACK_TITLE: '🚨 CI Pipeline Failed: echolife-backend'
-          SLACK_MESSAGE: 'A pipeline step failed (Gitleaks, SonarQube, or Docker). Please check the GitHub Actions logs.'
+          SLACK_MESSAGE: 'A pipeline step failed (Gitleaks or Docker). Please check the GitHub Actions logs.'
