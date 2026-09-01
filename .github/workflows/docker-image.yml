@@ -15,11 +15,10 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Required to fetch full history for Gitleaks
-          fetch-depth: 0 
+          fetch-depth: 0
 
       # -----------------------------------------------------------
-      # 1. SECURITY: Gitleaks (Fails immediately if secrets found)
+      # 1. SECURITY: Gitleaks Secret Scanning
       # -----------------------------------------------------------
       - name: Check for Hardcoded Secrets
         uses: gitleaks/gitleaks-action@v2
@@ -27,7 +26,26 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # -----------------------------------------------------------
-      # 2. SECURITY: Trivy Filesystem Scan (pom.xml & Java Source)
+      # 2. SETUP JAVA & POPULATE MAVEN CACHE (Prevents Trivy 429)
+      # -----------------------------------------------------------
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Resolve Maven Dependencies
+        run: |
+          chmod +x ./mvnw || true
+          if [ -f "./mvnw" ]; then
+            ./mvnw dependency:resolve -q
+          else
+            mvn dependency:resolve -q
+          fi
+
+      # -----------------------------------------------------------
+      # 3. SECURITY: Trivy Filesystem Scan
       # -----------------------------------------------------------
       - name: Run Trivy FS Vulnerability Scanner
         uses: aquasecurity/trivy-action@master
@@ -36,10 +54,10 @@ jobs:
           scan-ref: '.'
           format: 'table'
           severity: 'CRITICAL,HIGH'
-          exit-code: '0' # Set to '1' to fail the pipeline if vulnerable dependencies exist
+          exit-code: '0'
 
       # -----------------------------------------------------------
-      # 3. AWS AUTHENTICATION
+      # 4. AWS AUTHENTICATION
       # -----------------------------------------------------------
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -53,7 +71,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       # -----------------------------------------------------------
-      # 4. DEPLOY: Build Docker Image Locally
+      # 5. DEPLOY: Build Docker Image Locally
       # -----------------------------------------------------------
       - name: Build Docker Image
         env:
@@ -64,7 +82,7 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
 
       # -----------------------------------------------------------
-      # 5. SECURITY: Trivy Container Image Scan (Before Push)
+      # 6. SECURITY: Trivy Container Image Scan (Before Push)
       # -----------------------------------------------------------
       - name: Run Trivy Image Vulnerability Scanner
         uses: aquasecurity/trivy-action@master
@@ -72,10 +90,10 @@ jobs:
           image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.run_number }}
           format: 'table'
           severity: 'CRITICAL,HIGH'
-          exit-code: '0' # Set to '1' to block pushing the backend image to ECR if vulnerabilities exist
+          exit-code: '0'
 
       # -----------------------------------------------------------
-      # 6. DEPLOY: Push Verified Image to AWS ECR
+      # 7. DEPLOY: Push Verified Image to AWS ECR
       # -----------------------------------------------------------
       - name: Push Docker Image to ECR
         env:
@@ -87,7 +105,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
       # -----------------------------------------------------------
-      # 7. NOTIFICATIONS: Slack Alert on Success
+      # 8. NOTIFICATIONS: Slack Alert on Success
       # -----------------------------------------------------------
       - name: Notify Slack on Success
         if: success()
@@ -99,7 +117,7 @@ jobs:
           SLACK_MESSAGE: 'Pipeline completed successfully. Trivy scans passed and image build #${{ github.run_number }} is now available in AWS ECR.'
 
       # -----------------------------------------------------------
-      # 8. NOTIFICATIONS: Slack Alert on Failure
+      # 9. NOTIFICATIONS: Slack Alert on Failure
       # -----------------------------------------------------------
       - name: Notify Slack on Failure
         if: failure()
