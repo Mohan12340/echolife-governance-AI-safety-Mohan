@@ -27,7 +27,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       # -----------------------------------------------------------
-      # 2. DEPLOY: Build and Push to AWS ECR
+      # 2. SECURITY: Trivy Filesystem Scan (pom.xml & Java Source)
+      # -----------------------------------------------------------
+      - name: Run Trivy FS Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0' # Set to '1' to fail the pipeline if vulnerable dependencies exist
+
+      # -----------------------------------------------------------
+      # 3. AWS AUTHENTICATION
       # -----------------------------------------------------------
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -40,21 +52,42 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and Push Docker Image
+      # -----------------------------------------------------------
+      # 4. DEPLOY: Build Docker Image Locally
+      # -----------------------------------------------------------
+      - name: Build Docker Image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
           IMAGE_TAG: ${{ github.run_number }}
         run: |
-          # Build once, apply BOTH tags at the same time
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
-          
-          # Push both tags to AWS
+
+      # -----------------------------------------------------------
+      # 5. SECURITY: Trivy Container Image Scan (Before Push)
+      # -----------------------------------------------------------
+      - name: Run Trivy Image Vulnerability Scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_REPOSITORY }}:${{ github.run_number }}
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0' # Set to '1' to block pushing the backend image to ECR if vulnerabilities exist
+
+      # -----------------------------------------------------------
+      # 6. DEPLOY: Push Verified Image to AWS ECR
+      # -----------------------------------------------------------
+      - name: Push Docker Image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.run_number }}
+        run: |
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
       # -----------------------------------------------------------
-      # 3. NOTIFICATIONS: Slack Alert on Success
+      # 7. NOTIFICATIONS: Slack Alert on Success
       # -----------------------------------------------------------
       - name: Notify Slack on Success
         if: success()
@@ -63,10 +96,10 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_COLOR: '#00ff00'
           SLACK_TITLE: '✅ CI Pipeline Succeeded: echolife-backend'
-          SLACK_MESSAGE: 'Pipeline completed successfully. Image build #${{ github.run_number }} is now available in AWS ECR.'
+          SLACK_MESSAGE: 'Pipeline completed successfully. Trivy scans passed and image build #${{ github.run_number }} is now available in AWS ECR.'
 
       # -----------------------------------------------------------
-      # 4. NOTIFICATIONS: Slack Alert on Failure
+      # 8. NOTIFICATIONS: Slack Alert on Failure
       # -----------------------------------------------------------
       - name: Notify Slack on Failure
         if: failure()
@@ -75,4 +108,4 @@ jobs:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
           SLACK_COLOR: '#ff0000'
           SLACK_TITLE: '🚨 CI Pipeline Failed: echolife-backend'
-          SLACK_MESSAGE: 'A pipeline step failed (Gitleaks or Docker). Please check the GitHub Actions logs.'
+          SLACK_MESSAGE: 'A pipeline step failed (Gitleaks, Trivy scan, or Docker build/push). Please check the GitHub Actions logs.'
