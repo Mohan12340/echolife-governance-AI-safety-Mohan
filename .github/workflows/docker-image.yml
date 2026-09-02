@@ -56,14 +56,12 @@ jobs:
 
     if [ -f "./mvnw" ]; then
       ./mvnw clean package sonar:sonar \
-        -DskipTests \
         -Dsonar.projectKey=echolife-backend \
         -Dsonar.projectName="EchoLife Backend" \
         -Dsonar.host.url="$SONAR_HOST_URL" \
         -Dsonar.token="$SONAR_TOKEN"
     else
       mvn clean package sonar:sonar \
-        -DskipTests \
         -Dsonar.projectKey=echolife-backend \
         -Dsonar.projectName="EchoLife Backend" \
         -Dsonar.host.url="$SONAR_HOST_URL" \
