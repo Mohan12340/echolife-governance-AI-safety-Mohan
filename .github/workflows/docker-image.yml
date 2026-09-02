@@ -47,26 +47,26 @@ jobs:
       # -----------------------------------------------------------
       # 2.5 CODE QUALITY: SonarQube Analysis
       # -----------------------------------------------------------
-    - name: Analyze with SonarQube
-  env:
-    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-  run: |
-    chmod +x ./mvnw || true
-
-    if [ -f "./mvnw" ]; then
-      ./mvnw clean package sonar:sonar \
-        -Dsonar.projectKey=echolife-backend \
-        -Dsonar.projectName="EchoLife Backend" \
-        -Dsonar.host.url="$SONAR_HOST_URL" \
-        -Dsonar.token="$SONAR_TOKEN"
-    else
-      mvn clean package sonar:sonar \
-        -Dsonar.projectKey=echolife-backend \
-        -Dsonar.projectName="EchoLife Backend" \
-        -Dsonar.host.url="$SONAR_HOST_URL" \
-        -Dsonar.token="$SONAR_TOKEN"
-    fi
+      - name: Analyze with SonarQube
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          chmod +x ./mvnw || true
+          
+          if [ -f "./mvnw" ]; then
+            ./mvnw clean package sonar:sonar \
+              -Dsonar.projectKey=echolife-backend \
+              -Dsonar.projectName="EchoLife Backend" \
+              -Dsonar.host.url="$SONAR_HOST_URL" \
+              -Dsonar.token="$SONAR_TOKEN"
+          else
+            mvn clean package sonar:sonar \
+              -Dsonar.projectKey=echolife-backend \
+              -Dsonar.projectName="EchoLife Backend" \
+              -Dsonar.host.url="$SONAR_HOST_URL" \
+              -Dsonar.token="$SONAR_TOKEN"
+          fi
 
       # -----------------------------------------------------------
       # 3. SECURITY: Trivy Filesystem Scan
