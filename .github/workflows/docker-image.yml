@@ -44,31 +44,31 @@ jobs:
             mvn dependency:resolve -q
           fi
 
-    # -----------------------------------------------------------
-  # 2.5 CODE QUALITY: SonarQube Analysis
-  # -----------------------------------------------------------
-  - name: Analyze with SonarQube
-    env:
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-    run: |
-      chmod +x ./mvnw || true
-      
-      if [ -f "./mvnw" ]; then
-        ./mvnw clean package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-          -Dsonar.projectKey=echolife-backend \
-          -Dsonar.projectName="EchoLife Backend" \
-          -Dsonar.host.url="$SONAR_HOST_URL" \
-          -Dsonar.token="$SONAR_TOKEN" \
-          -DskipTests
-      else
-        mvn clean package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-          -Dsonar.projectKey=echolife-backend \
-          -Dsonar.projectName="EchoLife Backend" \
-          -Dsonar.host.url="$SONAR_HOST_URL" \
-          -Dsonar.token="$SONAR_TOKEN" \
-          -DskipTests
-      fi
+      # -----------------------------------------------------------
+      # 2.5 CODE QUALITY: SonarQube Analysis
+      # -----------------------------------------------------------
+      - name: Analyze with SonarQube
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: |
+          chmod +x ./mvnw || true
+          
+          if [ -f "./mvnw" ]; then
+            ./mvnw clean package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+              -Dsonar.projectKey=echolife-backend \
+              -Dsonar.projectName="EchoLife Backend" \
+              -Dsonar.host.url="$SONAR_HOST_URL" \
+              -Dsonar.token="$SONAR_TOKEN" \
+              -DskipTests
+          else
+            mvn clean package org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
+              -Dsonar.projectKey=echolife-backend \
+              -Dsonar.projectName="EchoLife Backend" \
+              -Dsonar.host.url="$SONAR_HOST_URL" \
+              -Dsonar.token="$SONAR_TOKEN" \
+              -DskipTests
+          fi
 
       # -----------------------------------------------------------
       # 3. SECURITY: Trivy Filesystem Scan
