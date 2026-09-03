@@ -35,6 +35,7 @@ CVE-2026-54291
 # Spring Boot & Spring Data
 CVE-2026-40973
 CVE-2026-41716
+CVE-2026-41695
 
 # Spring Security Web
 CVE-2026-22732
