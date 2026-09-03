@@ -80,6 +80,7 @@ jobs:
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
         with:
           pollingTimeoutSec: 300
+          scanMetadataReportFile: target/sonar/report-task.txt  # Explicitly point to the Maven output
 
       # -----------------------------------------------------------
       # 3. SECURITY: Trivy Filesystem Scan (Strict Gate)
